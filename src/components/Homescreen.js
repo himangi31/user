@@ -1,38 +1,25 @@
 import React, { useEffect } from "react";
-import {
-  AppBar,
-  Toolbar,
-  Button,
-  Typography,
-  Container,
-  Grid,
-  Card,
-  CardContent,
-  CardMedia,
-  Box, List,
-  ListItem,
-  ListItemIcon,
-  ListItemText
+import {AppBar,Toolbar,Button,Typography,Container,Grid,Card,CardContent,CardMedia, Box, List, ListItem,ListItemIcon,ListItemText
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { useNavigate } from "react-router-dom";
 import BusinessIcon from "@mui/icons-material/Business";
 import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
 import PersonIcon from "@mui/icons-material/Person";
-import PlayCircleFilledIcon from '@mui/icons-material/PlayCircleFilled';
 import { Paper } from "@mui/material";
 import { Verified, FlashOn, Security, ThumbUp } from "@mui/icons-material";
 import AOS from "aos";
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { Link as RouterLink } from "react-router-dom";
+import Navbar from "../components/Navbar";
 import "aos/dist/aos.css";
 
 const Homescreen = () => {
   useEffect(() => {
     AOS.init({ duration: 1000, once: true });
   }, []);
-
-
-
   
+    const navigate = useNavigate();
+ 
 const reasons = [
   {
     icon: <Verified fontSize="large" color="primary" />,
@@ -56,42 +43,26 @@ const reasons = [
   },
 ];
 
-  return (
-    <>
-     {/* Navbar */}
-<AppBar position="sticky" color="default" elevation={0}>
-  <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-    {/* Logo + Name */}
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <Box
-        component="img"
-        src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpbLnlkBs2PIeWO-RxlER11LMJN7DrNdtK_Q&s" // yahan logo ka path
-        alt="Logo"
-        sx={{ width: 70, height: 40 }} // size adjust kar sakte ho
-      />
-      <Typography variant="h6" fontWeight="bold" color="success.main">
-        Best Power Equipments
-      </Typography>
-    </Box>
 
-    {/* Navigation Buttons */}
-    <Box>
-      <Button color="inherit">Home</Button>
-      <Button color="inherit">Company</Button>
-      <Button color="inherit">Products</Button>
-      <Button color="inherit">Contact</Button>
-      <Button variant="contained" color="success">
-        Register
-      </Button>
-    </Box>
-  </Toolbar>
-</AppBar>
+  return (
+      <>
+     <Box
+     
+  sx={{
+    backgroundColor: "#000",  // ✅ पूरे app का default background black
+    minHeight: "10vh",
+  }}
+>
+  <Navbar />
+  {/* बाकी content */}
 
 
       {/* Hero Section */}
       <Box
   sx={{
     position: "relative",
+      minHeight: "70vh",  // ✅ Full screen height
+    width: "100%", 
     backgroundImage:
       "url('https://www.rightpowerups.com.my/wp-content/uploads/2023/09/WhatsApp-Image-2023-09-01-at-17.49.35.jpg')",
     backgroundSize: "cover",
@@ -178,6 +149,7 @@ const reasons = [
         color="success"
         sx={{ mr: 2 }}
         data-aos="zoom-in"
+          onClick={() => navigate("/productview")} // Navigate on click
       >
         Explore Products
       </Button>
@@ -193,7 +165,7 @@ const reasons = [
   </Container>
 </Box>
 
-
+</Box>
       {/* Solutions Section */}
       <Container sx={{ py: 10 }}>
         <Typography
@@ -224,6 +196,7 @@ const reasons = [
               btn: "Explore More",
               icon: <BusinessIcon sx={{ color: "success.main" }} />,
               img: "https://www.shutterstock.com/image-photo/data-centers-filled-rows-servers-600nw-2502153963.jpg"
+               , path: "/datacenter",
             },
             {
               title: "Power Solutions",
@@ -306,7 +279,7 @@ const reasons = [
                   >
                     {item.text}
                   </Typography>
-                  <Button variant="contained" color="success">
+                  <Button variant="contained" color="success"  onClick={() => navigate(item.path)}>
                     {item.btn}
                   </Button>
                 </CardContent>

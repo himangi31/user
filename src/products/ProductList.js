@@ -1,192 +1,355 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { DataGrid } from '@mui/x-data-grid';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
-  Paper, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Button, Typography
-} from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  TextField,
+  Divider,
+} from "@mui/material";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 
-const BASE_URL = 'http://localhost:5000/uploads/'; // ✅ CHANGE BASED ON YOUR BACKEND
+const API_BASE = "http://localhost:5000";
 
 export default function ProductList() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editRow, setEditRow] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [brochureFile, setBrochureFile] = useState(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewType, setPreviewType] = useState('');
-  const [previewSrc, setPreviewSrc] = useState('');
+  const [products, setProducts] = useState([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedTech, setSelectedTech] = useState("");
+
+  // State for edit functionality
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [techDialogOpen, setTechDialogOpen] = useState(false); // Separate dialog for tech_description
+  const [editData, setEditData] = useState({
+    id_product: "",
+    product_name: "",
+    voltage: "",
+    capacity: "",
+    tech_description: "",
+  });
+
+  // Fetch products
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/product/fetch`);
+      setProducts(res.data);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    }
+  };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const fetchProducts = () => {
-    setLoading(true);
-    axios.get('http://localhost:5000/api/productget')
-      .then(res => setRows(res.data))
-      .catch(err => console.error('Error fetching products:', err))
-      .finally(() => setLoading(false));
+  // Handle delete product
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await axios.delete(`${API_BASE}/api/product/delete/${id}`);
+      fetchProducts();
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
   };
 
-  const handleDelete = (id) => {
-    axios.delete(`http://localhost:5000/api/products/${id}`)
-      .then(() => {
-        setRows(prev => prev.filter(row => row.product_id !== id));
-      })
-      .catch(err => console.error('Delete failed:', err));
+  // Open technical description viewer
+  const handleOpenTech = (techHTML) => {
+    setSelectedTech(techHTML);
+    setOpenDialog(true);
   };
 
-  const handleEditSave = () => {
-    const formData = new FormData();
-    formData.append('product_name', editRow.product_name);
-    formData.append('product_price', editRow.product_price);
-    formData.append('product_category', editRow.product_category);
-    formData.append('description', editRow.description);
-    if (imageFile) formData.append('image', imageFile);
-    if (brochureFile) formData.append('brochure', brochureFile);
-
-    axios.put(`http://localhost:5000/api/products/${editRow.product_id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-      .then(() => {
-        fetchProducts();
-        setEditRow(null);
-        setImageFile(null);
-        setBrochureFile(null);
-      })
-      .catch(err => console.error('Edit error:', err));
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedTech("");
   };
 
-  const handlePreview = (type, filename) => {
-    if (!filename) return;
-    setPreviewType(type);
-    setPreviewSrc(`${BASE_URL}${filename}`);
-    setPreviewOpen(true);
+  /** ================== EDIT LOGIC ================== */
+  const handleEditOpen = (product) => {
+    setEditData({
+      id_product: product.id_product,
+      product_name: product.product_name || "",
+      voltage: product.voltage || "",
+      capacity: product.capacity || "",
+      tech_description: product.tech_description || "",
+    });
+    setEditDialogOpen(true);
   };
 
-  const columns = [
-    { field: 'product_id', headerName: 'ID', width: 70 },
-    { field: 'product_name', headerName: 'Name', width: 130 },
-    { field: 'product_price', headerName: 'Price', width: 100 },
-    { field: 'product_category', headerName: 'Category', width: 120 },
-    { field: 'description', headerName: 'Description', width: 180 },
-    {
-      field: 'brochure', headerName: 'Brochure', width: 130,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="text"
-          onClick={() => handlePreview('brochure', params.value)}
-        >
-          View
-        </Button>
-      )
-    },
-    {
-      field: 'image', headerName: 'Image', width: 130,
-      renderCell: (params) => (
-        <img
-          src={`${BASE_URL}${params.value}`} // ✅ FULL PATH
-          alt="product"
-          style={{ width: 50, height: 50, cursor: 'pointer', objectFit: 'cover' }}
-          onClick={() => handlePreview('image', params.value)}
-        />
-      )
-    },
-    {
-      field: 'actions', headerName: 'Actions', width: 120,
-      renderCell: (params) => (
-        <>
-          <IconButton onClick={() => setEditRow(params.row)}><EditIcon /></IconButton>
-          <IconButton onClick={() => handleDelete(params.row.product_id)}><DeleteIcon /></IconButton>
-        </>
-      ),
-    },
-  ];
+  const handleEditClose = () => {
+    setEditDialogOpen(false);
+    setEditData({
+      id_product: "",
+      product_name: "",
+      voltage: "",
+      capacity: "",
+      tech_description: "",
+    });
+  };
+
+  // Handle form input change
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Submit updated product data
+  const handleEditSubmit = async () => {
+    try {
+      await axios.put(`${API_BASE}/api/product/update/${editData.id_product}`, {
+        product_name: editData.product_name,
+        voltage: editData.voltage,
+        capacity: editData.capacity,
+        tech_description: editData.tech_description,
+      });
+      alert("Product updated successfully!");
+      fetchProducts();
+      handleEditClose();
+      setTechDialogOpen(false);
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Failed to update product.");
+    }
+  };
 
   return (
-    <>
-      <Paper sx={{ height: 550, width: '100%', boxShadow: 3 }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          getRowId={(row) => row.product_id}
-          pageSizeOptions={[5, 10]}
-          checkboxSelection
-          loading={loading}
-          sx={{ border: 0 }}
-        />
+    <Box sx={{ p: 0, width: "100%", overflowX: "hidden" }}>
+      <Typography variant="h4" gutterBottom align="center">
+        📋 Product List
+      </Typography>
 
-        {editRow && (
-          <Dialog open onClose={() => setEditRow(null)} fullWidth>
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogContent>
-              <TextField
-                margin="dense"
-                label="Name"
-                fullWidth
-                value={editRow.product_name}
-                onChange={(e) => setEditRow({ ...editRow, product_name: e.target.value })}
-              />
-              <TextField
-                margin="dense"
-                label="Price"
-                fullWidth
-                value={editRow.product_price}
-                onChange={(e) => setEditRow({ ...editRow, product_price: e.target.value })}
-              />
-              <TextField
-                margin="dense"
-                label="Category"
-                fullWidth
-                value={editRow.product_category}
-                onChange={(e) => setEditRow({ ...editRow, product_category: e.target.value })}
-              />
-              <TextField
-                margin="dense"
-                label="Description"
-                fullWidth
-                value={editRow.description}
-                onChange={(e) => setEditRow({ ...editRow, description: e.target.value })}
-              />
+      {/* Product Table */}
+      <TableContainer component={Paper} sx={{ width: "100%" }}>
+        <Table aria-label="product table" size="small">
+          <TableHead sx={{ bgcolor: "#eee" }}>
+            <TableRow>
+              <TableCell>#</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Image</TableCell>
+              <TableCell>Volt</TableCell>
+              <TableCell>Capacity</TableCell>
+              <TableCell>Catalogue</TableCell>
+              <TableCell>Tech Spec</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
 
-              <Typography variant="body2" sx={{ mt: 2 }}>Change Image:</Typography>
-              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
+          <TableBody>
+            {products.map((prod, index) => (
+              <TableRow key={prod.id_product}>
+                <TableCell>{index + 1}</TableCell>
+                <TableCell
+                  sx={{
+                    maxWidth: 120,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {prod.product_name}
+                </TableCell>
 
-              <Typography variant="body2" sx={{ mt: 2 }}>Change Brochure:</Typography>
-              <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setBrochureFile(e.target.files[0])} />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setEditRow(null)}>Cancel</Button>
-              <Button variant="contained" onClick={handleEditSave}>Save</Button>
-            </DialogActions>
-          </Dialog>
-        )}
-      </Paper>
+                <TableCell>
+                  {prod.product_image ? (
+                    <img
+                      src={`${API_BASE}/uploads/images/${prod.product_image}`}
+                      alt={prod.product_name}
+                      style={{
+                        width: 50,
+                        height: 40,
+                        objectFit: "cover",
+                        borderRadius: 4,
+                      }}
+                    />
+                  ) : (
+                    "N/A"
+                  )}
+                </TableCell>
+                <TableCell>{prod.voltage || "N/A"}</TableCell>
+                <TableCell>{prod.capacity || "N/A"}</TableCell>
+                <TableCell>
+                  {prod.pdf_certificate ? (
+                    <Button
+                      href={`${API_BASE}/uploads/pdfs/${prod.pdf_certificate}`}
+                      target="_blank"
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: "0.7rem", px: 1 }}
+                    >
+                      View
+                    </Button>
+                  ) : (
+                    "N/A"
+                  )}
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    color="primary"
+                    size="small"
+                    onClick={() => handleOpenTech(prod.tech_description)}
+                  >
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+                <TableCell>
+                  {/* Edit Button */}
+                  <IconButton
+                    color="primary"
+                    size="small"
+                    onClick={() => handleEditOpen(prod)}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
 
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Preview</DialogTitle>
+                  {/* Delete Button */}
+                  <IconButton
+                    color="error"
+                    size="small"
+                    onClick={() => handleDelete(prod.id_product)}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Technical Spec Viewer Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Technical Specification</DialogTitle>
         <DialogContent dividers>
-          {previewType === 'image' ? (
-            <img src={previewSrc} alt="Preview" style={{ width: '100%' }} />
-          ) : (
-            <iframe
-              src={previewSrc}
-              title="Brochure Preview"
-              width="100%"
-              height="500px"
-              style={{ border: 'none' }}
+          <Box
+            sx={{
+              p: 2,
+              background: "#f9f9f9",
+              border: "1px solid #ccc",
+              borderRadius: 1,
+              overflowX: "auto",
+              maxHeight: "70vh",
+            }}
+            dangerouslySetInnerHTML={{ __html: selectedTech }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleEditClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Product</DialogTitle>
+        <DialogContent dividers>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <TextField
+              label="Product Name"
+              name="product_name"
+              value={editData.product_name}
+              onChange={handleEditChange}
+              fullWidth
             />
-          )}
+            <TextField
+              label="Voltage"
+              name="voltage"
+              value={editData.voltage}
+              onChange={handleEditChange}
+              fullWidth
+            />
+            <TextField
+              label="Capacity"
+              name="capacity"
+              value={editData.capacity}
+              onChange={handleEditChange}
+              fullWidth
+            />
+
+            {/* Button to edit tech_description in a larger dialog */}
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => setTechDialogOpen(true)}
+            >
+              Edit Technical Description
+            </Button>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+          <Button onClick={handleEditClose}>Cancel</Button>
+          <Button variant="contained" color="primary" onClick={handleEditSubmit}>
+            Update
+          </Button>
         </DialogActions>
       </Dialog>
-    </>
+
+      {/* Large Tech Description Dialog */}
+      <Dialog
+        open={techDialogOpen}
+        onClose={() => setTechDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Edit Technical Description</DialogTitle>
+        <DialogContent dividers>
+          <Box display="flex" flexDirection="row" gap={3}>
+            {/* Left side: Editor */}
+            <Box flex={1}>
+              <TextField
+                label="Technical Description (HTML)"
+                name="tech_description"
+                value={editData.tech_description}
+                onChange={handleEditChange}
+                fullWidth
+                multiline
+                rows={18}
+                sx={{ fontFamily: "monospace" }}
+              />
+            </Box>
+
+            {/* Divider */}
+            <Divider orientation="vertical" flexItem />
+
+            {/* Right side: Live Preview */}
+            <Box
+              flex={1}
+              sx={{
+                p: 2,
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                overflow: "auto",
+                maxHeight: "70vh",
+                background: "#fafafa",
+              }}
+            >
+              <Typography variant="subtitle1" gutterBottom>
+                Live Preview
+              </Typography>
+              <Box
+                dangerouslySetInnerHTML={{ __html: editData.tech_description }}
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTechDialogOpen(false)}>Close</Button>
+          <Button variant="contained" onClick={handleEditSubmit}>
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
